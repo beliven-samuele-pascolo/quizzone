@@ -7,6 +7,7 @@ use App\Enums\UserRole;
 use App\Events\QuestionUpdated;
 use App\Models\Question;
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class QuizService
@@ -54,15 +55,27 @@ class QuizService
             return;
         }
 
-        // Blocca il gioco e prenota
-        $question->update([
-            'status' => QuestionStatus::Buzzed,
-            'buzzed_user_id' => $user->id,
-            'timer_ends_at' => now()->addSeconds(10),
-            'answer' => null,
-        ]);
+        // atomic lock su redis con 1 secondo di attesa -> TTL deve bastare al db per l'operazione
+        Cache::lock('quiz_buzzer_lock', 1)->get(function () use ($question, $user) {
 
-        QuestionUpdated::dispatch();
+            // ri-check condizioni dopo il lock -> consigliato
+            $question->refresh();
+            $user->refresh();
+
+            if ($question->status !== QuestionStatus::Active || $user->banned) {
+                return;
+            }
+
+            // Blocca il gioco e prenota
+            $question->update([
+                'status' => QuestionStatus::Buzzed,
+                'buzzed_user_id' => $user->id,
+                'timer_ends_at' => now()->addSeconds(10),
+                'answer' => null,
+            ]);
+
+            QuestionUpdated::dispatch();
+        });
     }
 
     public function answer(User $user, string $text): void

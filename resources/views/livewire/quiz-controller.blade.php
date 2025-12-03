@@ -6,7 +6,7 @@
         
         <div class="bg-zinc-100 dark:bg-zinc-950 p-4 border-b border-zinc-200 dark:border-zinc-800">
             <div class="flex justify-between items-center mb-2">
-                <flux:heading size="lg">Quizzone</flux:heading>
+                <flux:heading size="xl">Quizzone</flux:heading>
                 @if($is_admin)
                     <div class="text-xs font-mono text-zinc-500">SEI IL CONDUTTORE, CONDUCI</div>
                 @endif
@@ -31,6 +31,22 @@
                         {{ $question->body }}
                     </h2>
                 </div>
+
+                @if($question->status === QuestionStatus::Active)
+                    <div x-data="
+                        { 
+                            expiry: {{ $question->timer_ends_at?->timestamp * 1000 }}, 
+                            remaining: 0,
+                            update() {
+                                this.remaining = Math.max(0, Math.ceil((this.expiry - Date.now()) / 1000));
+                            }
+                        }" 
+                        x-init="update(); setInterval(() => update(), 100)"
+                        class="absolute top-4 right-4 font-mono text-xl text-zinc-400"
+                    >
+                        <span x-text="remaining"></span>s
+                    </div>
+                @endif
             @else
                 <div class="text-zinc-400 italic text-xl animate-pulse">
                     In attesa della domanda...
@@ -40,7 +56,7 @@
 
         @if($is_admin)
             <div class="bg-zinc-50 dark:bg-zinc-950 p-6 border-t border-zinc-200 dark:border-zinc-800">
-                <flux:heading size="sm" class="mb-3 text-indigo-500 uppercase">Crea nuova domanda</flux:heading>
+                <flux:heading size="sm" class="mb-3 text-indigo-500 uppercase">CONSOLE CONDUTTORE</flux:heading>
                 
                 @if(!$question || $question->status === QuestionStatus::Pending)
                     <div class="flex gap-2 w-full">
@@ -58,7 +74,7 @@
                     </div>
 
                 @else
-                    <div class="text-center text-xs text-zinc-400">
+                    <div class="text-center text-sm text-zinc-400">
                         Attendere prenotazioni...
                     </div>
                 @endif

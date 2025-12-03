@@ -1,3 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@import '../../vendor/livewire/flux/dist/flux.css';
+@import '../../vendor/livewire/flux/dist/themes/dark.css';
+@custom-variant dark (&:where(.dark, .dark *));

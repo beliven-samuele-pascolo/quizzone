@@ -13,7 +13,7 @@ class QuizService
 {
     public function getCurrentQuestion(): ?Question
     {
-        return Question::where('status', QuestionStatus::Active)->first();
+        return Question::whereNot('status', QuestionStatus::Closed)->first();
     }
 
     public function startNewQuestion(string $text): void
@@ -31,7 +31,6 @@ class QuizService
             ]);
         });
 
-        // Notifica a tutti i giocatori che la domanda è stata posta
         QuestionUpdated::dispatch();
     }
 
@@ -43,7 +42,80 @@ class QuizService
             Question::whereIn('status', [QuestionStatus::Active, QuestionStatus::Buzzed])->update(['status' => QuestionStatus::Closed]);
         });
 
-        // Notifica a tutti i giocatori che la domanda è stata post
+        QuestionUpdated::dispatch();
+    }
+
+    // un player preme il buzzer
+    public function buzz(User $user): void
+    {
+        $question = $this->getCurrentQuestion();
+
+        if (! $question || $question->status !== QuestionStatus::Active || $user->banned || now()->greaterThan($question->timer_ends_at)) {
+            return;
+        }
+
+        // Blocca il gioco e prenota
+        $question->update([
+            'status' => QuestionStatus::Buzzed,
+            'buzzed_user_id' => $user->id,
+            'timer_ends_at' => now()->addSeconds(10),
+            'answer' => null,
+        ]);
+
+        QuestionUpdated::dispatch();
+    }
+
+    public function answer(User $user, string $text): void
+    {
+        $question = $this->getCurrentQuestion();
+
+        if (! $question || $question->status !== QuestionStatus::Buzzed || $question->buzzed_user_id !== $user->id) {
+            return;
+        }
+
+        // Salva la risposta data dal giocatore
+        $question->update([
+            'answer' => $text,
+            'timer_ends_at' => null,
+        ]);
+
+        QuestionUpdated::dispatch();
+    }
+
+    public function handleAnswer(bool $isCorrect): void
+    {
+        $question = $this->getCurrentQuestion();
+
+        if (! $question || ! $question->buzzed_user_id) {
+            return;
+        }
+
+        $buzzedUser = $question->buzzedUser;
+
+        if ($isCorrect) {
+            // risposta corretta -> +1 punto e chiudi domanda
+            DB::transaction(function () use ($buzzedUser, $question) {
+                $buzzedUser->increment('score');
+
+                $question->update([
+                    'status' => QuestionStatus::Closed,
+                    'winner_user_id' => $buzzedUser->id,
+                ]);
+            });
+        } else {
+            // risposta errata -> banna giocatore e riattiva domanda
+            DB::transaction(function () use ($buzzedUser, $question) {
+                $buzzedUser->update(['banned' => true]);
+
+                $question->update([
+                    'status' => QuestionStatus::Active,
+                    'buzzed_user_id' => null,
+                    'timer_ends_at' => now()->addSeconds(10),
+                    'answer' => null,
+                ]);
+            });
+        }
+
         QuestionUpdated::dispatch();
     }
 }

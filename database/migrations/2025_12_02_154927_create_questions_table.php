@@ -21,6 +21,7 @@ return new class extends Migration
             $table->foreignId('buzzed_user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('winner_user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('timer_ends_at')->nullable();
+            $table->text('answer')->nullable();
             $table->timestamps();
         });
     }

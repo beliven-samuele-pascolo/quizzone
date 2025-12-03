@@ -69,7 +69,7 @@ class QuizService
     {
         $question = $this->getCurrentQuestion();
 
-        if (! $question || $question->status !== QuestionStatus::Buzzed || $question->buzzed_user_id !== $user->id) {
+        if (! $question || $question->status !== QuestionStatus::Buzzed || $question->buzzed_user_id !== $user->id || now()->greaterThan($question->timer_ends_at)) {
             return;
         }
 

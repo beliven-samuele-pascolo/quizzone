@@ -24,9 +24,6 @@ class TimerController extends Component
 
             if ($diff <= 0 && $this->isAdmin) {
                 $service->checkAndCloseIfExpired();
-
-                // forza il refresh del timer
-                $this->dispatch('timer-expired');
             }
         }
 

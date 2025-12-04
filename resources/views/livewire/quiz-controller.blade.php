@@ -44,18 +44,8 @@
                     </div>
 
                     @if($question->timer_ends_at)
-                        <div x-data="
-                            { 
-                                expiry: {{ $question->timer_ends_at?->timestamp * 1000 }}, 
-                                remaining: 0,
-                                update() {
-                                    this.remaining = Math.max(0, Math.ceil((this.expiry - Date.now()) / 1000));
-                                }
-                            }" 
-                            x-init="update(); setInterval(() => update(), 100)"
-                            class="absolute top-4 right-4 font-mono text-xl text-zinc-400"
-                        >
-                            <span x-text="remaining"></span>s
+                        <div class="absolute top-0 right-0 p-4">
+                            <livewire:timer-controller :question="$question" :is-admin="$is_admin" :key="'timer-'.$question->id" />
                         </div>
                     @endif
 
@@ -129,7 +119,7 @@
                         </flux:button>
                     </div>
 
-                @elseif($question->status === QuestionStatus::Buzzed)
+                @elseif($question->status === QuestionStatus::Buzzed && $question->answer !== null)
                     <flux:heading size="sm" class="mt-5 text-zinc-500 uppercase"> La risposta di {{ $buzzed_user->name }} è:</flux:heading>
                     <flux:heading size="lg" class="mb-8">{{ $question->answer }}</flux:heading>
                     <div class="flex gap-4 justify-center">

@@ -131,4 +131,34 @@ class QuizService
 
         QuestionUpdated::dispatch();
     }
+
+    public function checkAndCloseIfExpired(): void
+    {
+        $question = $this->getCurrentQuestion();
+
+        if (! $question || ! in_array($question->status, [QuestionStatus::Active, QuestionStatus::Buzzed])) {
+            return;
+        }
+
+        if ($question->timer_ends_at && now()->greaterThanOrEqualTo($question->timer_ends_at)) {
+
+            if ($question->status === QuestionStatus::Buzzed) {
+                // un giocatore aveva premuto il buzzer ma non ha risposto in tempo:
+                // - banna il giocatore
+                // - riattiva la domanda con timer 10s
+                $buzzedUser = $question->buzzedUser;
+                $buzzedUser->update(['banned' => true]);
+                $question->update(['buzzed_user_id' => null, 'answer' => null, 'status' => QuestionStatus::Active, 'timer_ends_at' => now()->addSeconds(10)]);
+
+                if (User::where('role', UserRole::Player)->where('banned', false)->count() === 0) {
+                    $question->update(['status' => QuestionStatus::Closed]);
+                }
+            } else {
+                // nessuno ha premuto il buzzer -> chiudi la domanda senza vincitore
+                $question->update(['status' => QuestionStatus::Closed]);
+            }
+
+            QuestionUpdated::dispatch();
+        }
+    }
 }

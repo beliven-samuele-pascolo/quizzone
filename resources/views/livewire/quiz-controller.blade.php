@@ -1,6 +1,6 @@
 @use('App\Enums\QuestionStatus')
 
-<div class="flex justify-center items-start pt-8 min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 flex-col gap-6">
+<div class="flex items-center pt-24 min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 flex-col gap-6">
     @if($is_admin)
         <flux:button wire:click="resetGame" class="text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300" icon="arrow-path">
             Nuovo gioco
